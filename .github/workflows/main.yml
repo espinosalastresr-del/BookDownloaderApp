@@ -1,80 +1,113 @@
-name: Android APK Build
-
+name: Build BookDownloader APK
 
 on:
-
   workflow_dispatch:
 
   push:
-
     branches:
-
       - main
-
 
 
 jobs:
 
   build:
 
-
     runs-on: ubuntu-latest
-
 
 
     steps:
 
-
-    - name: Checkout
-
+    - name: Checkout repository
       uses: actions/checkout@v4
 
 
-
-    - name: Setup Node
-
+    - name: Setup Node.js
       uses: actions/setup-node@v4
-
       with:
-
         node-version: 20
-
+        cache: npm
 
 
     - name: Setup Java
-
       uses: actions/setup-java@v4
-
       with:
-
         distribution: temurin
-
         java-version: 17
 
 
-
-    - name: Install dependencies
-
-      run: npm install
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
 
 
-    - name: Build APK
-
+    - name: Create React Native project
       run: |
 
-        cd android
+        npx @react-native-community/cli@latest init BookDownloader \
+        --skip-install
+
+
+
+    - name: Install application dependencies
+      working-directory: BookDownloader
+      run: |
+
+        npm install
+
+
+        npm install \
+        @react-navigation/native \
+        @react-navigation/bottom-tabs \
+        react-native-screens \
+        react-native-safe-area-context \
+        axios \
+        react-native-paper \
+        react-native-vector-icons \
+        react-native-sqlite-storage \
+        react-native-blob-util \
+        react-native-file-viewer \
+        @react-native-async-storage/async-storage
+
+
+
+    - name: Copy application source
+      run: |
+
+        rm -rf BookDownloader/src
+
+        cp -r src BookDownloader/src
+
+
+
+    - name: Copy custom App
+      run: |
+
+        cp src/App.tsx BookDownloader/App.tsx
+
+
+
+    - name: Configure Gradle permissions
+      run: |
+
+        chmod +x BookDownloader/android/gradlew
+
+
+
+    - name: Build Android Release APK
+      working-directory: BookDownloader/android
+      run: |
 
         ./gradlew assembleRelease
 
 
 
     - name: Upload APK
-
       uses: actions/upload-artifact@v4
 
       with:
 
-        name: BookDownloader.apk
+        name: BookDownloader-release.apk
 
-        path: android/app/build/outputs/apk/release/*.apk
+        path: |
+
+          BookDownloader/android/app/build/outputs/apk/release/*.apk
